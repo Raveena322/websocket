@@ -11,6 +11,10 @@ A real-time chat application built with React (Vite) frontend and Spring Boot ba
 | Backend | Spring Boot 4.0.5 |
 | Protocol | WebSocket (STOMP) |
 
+
+<img src = "src\Screenshot 2026-04-23 135844.png" alt = "page failed to load">
+<img src = "src\Screenshot 2026-04-23 135944.png" alt = "page failed to load">
+
 ## Project Structure
 
 ```
