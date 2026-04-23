@@ -8,26 +8,38 @@ import MessageInput from "./MessageInput";
 function Chat() {
   const [messages, setMessages] = useState([]);
   const [username, setUsername] = useState("");
+  const [connected, setConnected] = useState(false);
+  const [error, setError] = useState(null);
+  const messagesEndRef = useRef(null);
   const clientRef = useRef(null);
 
   useEffect(() => {
     const client = new Client({
       webSocketFactory: () => new SockJS("http://localhost:8080/ws"),
       reconnectDelay: 5000,
+      heartbeatIncoming: 4000,
+      heartbeatOutgoing: 4000,
       onConnect: () => {
         console.log("Connected ✅");
+        setConnected(true);
+        setError(null);
 
         client.subscribe("/topic/messages", (msg) => {
           const data = JSON.parse(msg.body);
-          setMessages((prev) => [...prev, data]);
+          setMessages((prev) => [...prev, { ...data, timestamp: new Date() }]);
         });
+      },
+      onDisconnect: () => {
+        console.log("Disconnected ❌");
+        setConnected(false);
       },
       onStompError: (frame) => {
         console.error("Broker error:", frame.headers["message"]);
-        console.error("Details:", frame.body);
+        setError("Connection error. Reconnecting...");
       },
       onWebSocketError: (error) => {
         console.error("WebSocket error:", error);
+        setError("Unable to connect to server");
       },
     });
 
@@ -38,6 +50,11 @@ function Chat() {
       client.deactivate();
     };
   }, []);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   const sendMessage = (text) => {
     if (!text.trim() || !username.trim()) return;
@@ -54,15 +71,25 @@ function Chat() {
 
   return (
     <div className="chat-box">
+      {/* Connection Status */}
+      <div className={`connection-status ${connected ? "connected" : "disconnected"}`}>
+        <span className="status-dot"></span>
+        {connected ? "Connected" : "Connecting..."}
+      </div>
+
+      {/* Error Message */}
+      {error && <div className="error-message">{error}</div>}
+
       <input
         className="username"
         type="text"
-        placeholder="Enter username"
+        placeholder="Enter your name..."
         value={username}
         onChange={(e) => setUsername(e.target.value)}
       />
       <MessageList messages={messages} />
-      <MessageInput sendMessage={sendMessage} />
+      <div ref={messagesEndRef} />
+      <MessageInput sendMessage={sendMessage} disabled={!connected || !username.trim()} />
     </div>
   );
 }
